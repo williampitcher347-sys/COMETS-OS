@@ -97,6 +97,18 @@
     .codery-editor { width: 50%; height: 100%; background: #1e1e1e; color: #d4d4d4; padding: 12px; border: none; border-right: 1px solid #3c3c3c; resize: none; outline: none; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; line-height: 1.5; }
     .codery-preview { width: 50%; height: 100%; background: #ffffff; border: none; }
 
+    /* FIREBASE CHAT STYLING */
+    .chat-container { display: flex; flex-direction: column; height: 100%; margin: -16px; background: #0b0e14; }
+    .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .chat-bubble { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4; word-break: break-word; }
+    .chat-bubble.mine { align-self: flex-end; background: #0078d4; color: #fff; }
+    .chat-bubble.other { align-self: flex-start; background: #161b22; border: 1px solid #30363d; color: #e6edf3; }
+    .chat-author { font-size: 10px; opacity: 0.7; font-weight: 600; margin-bottom: 2px; }
+    .chat-input-bar { display: flex; padding: 12px; background: #161b22; border-top: 1px solid #30363d; gap: 8px; }
+    .chat-input-bar input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; outline: none; }
+    .chat-input-bar button { padding: 8px 16px; background: #238636; border: none; color: white; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .chat-input-bar button:hover { background: #2ea043; }
+
     /* Taskbar */
     #taskbar {
       width: 100vw; height: 48px; background: rgba(18, 22, 28, 0.85);
@@ -172,23 +184,28 @@
 
   <!-- SVG ICON TEMPLATES -->
   <svg style="display: none;">
-    <!-- Fluent App Store Icon -->
     <g id="icon-app-store">
       <rect width="48" height="48" rx="10" fill="#0078D4"/>
       <path d="M15 16C15 12.134 18.134 9 22 9H26C29.866 9 33 12.134 33 16V18H35C36.1046 18 37 18.8954 37 20V36C37 37.1046 36.1046 38 35 38H13C11.8954 38 11 37.1046 11 36V20C11 18.8954 11.8954 18 13 18H15V16ZM18 18H30V16C30 13.7909 28.2091 12 26 12H22C19.7909 12 18 13.7909 18 16V18Z" fill="white"/>
       <path d="M20 25C20 23.8954 20.8954 23 22 23H26C27.1046 23 28 23.8954 28 25V29C28 30.1046 27.1046 31 26 31H22C20.8954 31 20 30.1046 20 29V25Z" fill="#60CDFF"/>
     </g>
-    <!-- CODERY IDE Icon -->
     <g id="icon-codery">
       <rect width="48" height="48" rx="10" fill="#1E1E1E"/>
       <path d="M14 16L8 24L14 32" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       <path d="M34 16L40 24L34 32" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       <path d="M27 12L21 36" stroke="#4ADE80" stroke-width="3.5" stroke-linecap="round" fill="none"/>
     </g>
+    <g id="icon-chat">
+      <rect width="48" height="48" rx="10" fill="#238636"/>
+      <path d="M14 15H34C35.1046 15 36 15.8954 36 17V29C36 30.1046 35.1046 31 34 31H20L14 35V31H14C12.8954 31 12 30.1046 12 29V17C12 15.8954 12.8954 15 14 15Z" fill="white"/>
+    </g>
   </svg>
 
-  <!-- Options Context Menu -->
+  <!-- Context Menu -->
   <div id="context-menu">
+    <div class="menu-item" onclick="openApp('chat'); hideContextMenu();">
+      <svg width="16" height="16" viewBox="0 0 48 48"><use href="#icon-chat"/></svg> Global Chat
+    </div>
     <div class="menu-item" onclick="openApp('store'); hideContextMenu();">
       <svg width="16" height="16" viewBox="0 0 48 48"><use href="#icon-app-store"/></svg> Open App Store
     </div>
@@ -222,6 +239,10 @@
 
   <!-- Desktop -->
   <div id="desktop" ondblclick="showContextMenu(event)">
+    <div class="app-icon" onclick="openApp('chat')">
+      <svg viewBox="0 0 48 48"><use href="#icon-chat"/></svg>
+      <span>Global Chat</span>
+    </div>
     <div class="app-icon" onclick="openApp('store')">
       <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
       <span>App Store</span>
@@ -250,6 +271,10 @@
     <div>
       <input type="text" class="start-search" placeholder="Type here to search COMET OS...">
       <div class="start-grid">
+        <div class="start-item" onclick="openApp('chat'); toggleStartMenu();">
+          <svg viewBox="0 0 48 48"><use href="#icon-chat"/></svg>
+          <span>Global Chat</span>
+        </div>
         <div class="start-item" onclick="openApp('store'); toggleStartMenu();">
           <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
           <span>App Store</span>
@@ -288,6 +313,9 @@
       <button class="taskbar-btn" onclick="toggleStartMenu()">
         <img src="https://api.iconify.design/fluent:grid-24-filled.svg?color=%230078d4" alt="Start">
       </button>
+      <button class="taskbar-btn" onclick="openApp('chat')">
+        <svg viewBox="0 0 48 48"><use href="#icon-chat"/></svg>
+      </button>
       <button class="taskbar-btn" onclick="openApp('store')">
         <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
       </button>
@@ -309,8 +337,10 @@
 
   <script>
     // --- FIREBASE REALTIME DATABASE CONFIGURATION ---
-    const FIREBASE_RTDB_URL = "https://turbo-95264-default-rtdb.firebaseio.com/comet_apps";
+    const FIREBASE_RTDB_URL = "https://turbo-95264-default-rtdb.firebaseio.com";
     const FALLBACK_ICON = "https://api.iconify.design/fluent:app-generic-24-filled.svg?color=%230078d4";
+
+    let chatInterval = null;
 
     // --- CONTEXT MENU OPTIONS ---
     function showContextMenu(e) {
@@ -370,7 +400,67 @@
       renderInstalledApps();
     }
 
-    // --- FIREBASE REALTIME DB INTEGRATION ---
+    // --- FIREBASE CHAT APP LOGIC ---
+    async function fetchChatMessages() {
+      try {
+        const res = await fetch(`${FIREBASE_RTDB_URL}/comet_messages.json`);
+        const data = await res.json();
+        const area = document.getElementById('chat-msg-area');
+        if (!area) return;
+
+        if (!data) {
+          area.innerHTML = '<p style="color:#8b949e; font-size:12px; text-align:center;">No messages yet. Say hi!</p>';
+          return;
+        }
+
+        const state = loadState();
+        const currentName = state.username || 'COMET USER';
+
+        const keys = Object.keys(data);
+        area.innerHTML = keys.map(k => {
+          const m = data[k];
+          const isMe = m.sender === currentName;
+          return `
+            <div class="chat-bubble ${isMe ? 'mine' : 'other'}">
+              <div class="chat-author">${m.sender}</div>
+              <div>${m.text}</div>
+            </div>
+          `;
+        }).join('');
+
+        area.scrollTop = area.scrollHeight;
+      } catch (e) {
+        console.error("Chat sync error:", e);
+      }
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chat-input-field');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const state = loadState();
+      const payload = {
+        sender: state.username || 'COMET USER',
+        text: text,
+        timestamp: Date.now()
+      };
+
+      input.value = '';
+
+      try {
+        await fetch(`${FIREBASE_RTDB_URL}/comet_messages.json`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        fetchChatMessages();
+      } catch (e) {
+        alert("Failed to send message over network.");
+      }
+    }
+
+    // --- FIREBASE STORE INTEGRATION ---
     async function uploadAppToFirebase(name, icon, url, description) {
       if (!name || !url) {
         alert("Please fill in at least the App Title and Web URL!");
@@ -378,7 +468,6 @@
       }
 
       const cleanIcon = icon.trim() ? icon.trim() : FALLBACK_ICON;
-
       const payload = {
         name: name,
         icon: cleanIcon,
@@ -387,7 +476,7 @@
       };
 
       try {
-        const response = await fetch(`${FIREBASE_RTDB_URL}.json`, {
+        const response = await fetch(`${FIREBASE_RTDB_URL}/comet_apps.json`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -397,7 +486,7 @@
           alert("App published successfully to COMET App Store!");
           openApp('store');
         } else {
-          alert("Error publishing app. Check your Realtime Database rules.");
+          alert("Error publishing app. Check Realtime Database rules.");
         }
       } catch (e) {
         console.error(e);
@@ -407,7 +496,7 @@
 
     async function fetchAppsFromFirebase() {
       try {
-        const res = await fetch(`${FIREBASE_RTDB_URL}.json`);
+        const res = await fetch(`${FIREBASE_RTDB_URL}/comet_apps.json`);
         const data = await res.json();
         if (!data) return [];
         return Object.keys(data).map(key => ({
@@ -505,7 +594,21 @@
       let title = 'Application';
       let content = '';
 
-      if (appId === 'codery') {
+      if (appId === 'chat') {
+        title = 'Global Firebase Chat';
+        content = `
+          <div class="chat-container">
+            <div class="chat-messages" id="chat-msg-area">Connecting to chat server...</div>
+            <div class="chat-input-bar">
+              <input type="text" id="chat-input-field" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+              <button onclick="sendChatMessage()">Send</button>
+            </div>
+          </div>
+        `;
+        fetchChatMessages();
+        if (chatInterval) clearInterval(chatInterval);
+        chatInterval = setInterval(fetchChatMessages, 2500);
+      } else if (appId === 'codery') {
         title = 'CODERY App Studio';
         content = `
           <div class="codery-container">
@@ -645,12 +748,7 @@
       win.style.top = '70px';
       win.style.zIndex = ++zIndexCounter;
 
-      let innerAppContent = '';
-      if (app.code) {
-        innerAppContent = `<iframe id="frame-${winId}"></iframe>`;
-      } else {
-        innerAppContent = `<iframe src="${app.url}" allow="fullscreen"></iframe>`;
-      }
+      let innerAppContent = app.code ? `<iframe id="frame-${winId}"></iframe>` : `<iframe src="${app.url}" allow="fullscreen"></iframe>`;
 
       win.innerHTML = `
         <div class="window-header" onmousedown="dragWindow(event, this.parentElement)">
@@ -666,14 +764,17 @@
       document.getElementById('desktop').appendChild(win);
 
       if (app.code) {
-        const iframe = document.getElementById(`frame-${winId}`);
-        iframe.srcdoc = app.code;
+        document.getElementById(`frame-${winId}`).srcdoc = app.code;
       }
     }
 
     function closeWindow(appId) {
       const win = document.getElementById(`win-${appId}`);
       if (win) win.remove();
+      if (appId === 'chat' && chatInterval) {
+        clearInterval(chatInterval);
+        chatInterval = null;
+      }
     }
 
     function focusWindow(win) {
@@ -699,16 +800,30 @@
       document.addEventListener('mouseup', stopHandler);
     }
 
+    // --- START MENU & TRAY CONTROLS ---
     function toggleStartMenu() {
-      document.getElementById('start-menu').classList.toggle('active');
+      const menu = document.getElementById('start-menu');
+      menu.classList.toggle('active');
     }
 
-    setInterval(() => {
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('start-menu');
+      const startBtn = document.querySelector('.taskbar-center .taskbar-btn');
+      if (menu.classList.contains('active') && !menu.contains(e.target) && !startBtn.contains(e.target)) {
+        menu.classList.remove('active');
+      }
+    });
+
+    // --- CLOCK TRAY ---
+    function updateClock() {
       const now = new Date();
       document.getElementById('clock-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       document.getElementById('clock-date').innerText = now.toISOString().split('T')[0];
-    }, 1000);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
+    // Initialize OS State
     applyState();
   </script>
 </body>

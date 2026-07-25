@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COMET OS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; color: white; }
+
+    /* Lock Screen */
+    #lock-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+      z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    }
+    #lock-screen.unlocked { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+    
+    .login-card {
+      background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 32px; border-radius: 16px; width: 340px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+    .login-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #0078d4, #005a9e); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; border: 2px solid rgba(255,255,255,0.2); }
+    .login-field { width: 100%; position: relative; }
+    .login-input { width: 100%; padding: 10px 38px 10px 14px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white; outline: none; font-size: 13px; }
+    .login-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #388bfd; cursor: pointer; font-size: 16px; }
+    .login-error { color: #f85149; font-size: 11px; display: none; margin-top: -8px; }
+
+    /* Desktop Environment */
+    #desktop {
+      width: 100vw; height: calc(100vh - 48px);
+      background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+      position: relative; padding: 16px;
+      display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 12px;
+    }
+
+    /* Desktop Icons */
+    .app-icon {
+      width: 86px; display: flex; flex-direction: column; align-items: center;
+      gap: 6px; cursor: pointer; border-radius: 6px; padding: 8px 4px;
+      border: 1px solid transparent; transition: all 0.15s ease;
+    }
+    .app-icon:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); }
+    .app-icon svg, .app-icon img { width: 42px; height: 42px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+    .app-icon span { font-size: 11px; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,0.9); font-weight: 400; color: #fff; word-break: break-word; }
+
+    /* Custom Context Menu */
+    #context-menu {
+      position: absolute; display: none; background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 6px 0; width: 180px; z-index: 100000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .menu-item {
+      padding: 8px 16px; font-size: 12px; color: #e6edf3; cursor: pointer;
+      display: flex; align-items: center; gap: 10px; transition: background 0.15s;
+    }
+    .menu-item:hover { background: rgba(0, 120, 212, 0.6); }
+    .menu-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0; }
+
+    /* Window UI */
+    .os-window {
+      position: absolute; width: 780px; height: 520px;
+      background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px; display: flex; flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); overflow: hidden;
+      min-width: 360px; min-height: 240px;
+    }
+    .window-header {
+      height: 38px; background: rgba(30, 36, 46, 0.85); display: flex; align-items: center;
+      justify-content: space-between; padding-left: 14px; cursor: move;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .window-title { font-size: 12px; font-weight: 500; color: #e6edf3; display: flex; align-items: center; gap: 8px; }
+    .window-controls { display: flex; height: 100%; }
+    .control-btn {
+      width: 46px; height: 100%; border: none; background: transparent; color: #ccc;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; transition: background 0.15s;
+    }
+    .control-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-close:hover { background: #e81123; color: white; }
+
+    .window-content { flex: 1; position: relative; background: #0d1117; overflow: auto; padding: 16px; }
+    .window-content iframe { width: 100%; height: 100%; border: none; }
+
+    /* CODERY IDE Styling */
+    .codery-container { display: flex; flex-direction: column; height: 100%; background: #1e1e1e; color: #d4d4d4; margin: -16px; }
+    .codery-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; }
+    .codery-toolbar input { background: #3c3c3c; border: 1px solid #555; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; outline: none; }
+    .codery-btn { background: #0e639c; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; }
+    .codery-btn:hover { background: #1177bb; }
+    .codery-workspace { display: flex; flex: 1; height: calc(100% - 45px); }
+    .codery-editor { width: 50%; height: 100%; background: #1e1e1e; color: #d4d4d4; padding: 12px; border: none; border-right: 1px solid #3c3c3c; resize: none; outline: none; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; line-height: 1.5; }
+    .codery-preview { width: 50%; height: 100%; background: #ffffff; border: none; }
+
+    /* Taskbar */
+    #taskbar {
+      width: 100vw; height: 48px; background: rgba(18, 22, 28, 0.85);
+      backdrop-filter: blur(20px); position: absolute; bottom: 0; left: 0;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08); z-index: 9999;
+    }
+    .taskbar-center {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .taskbar-btn {
+      width: 40px; height: 40px; border-radius: 6px; border: none; background: transparent;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .taskbar-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .taskbar-btn svg, .taskbar-btn img { width: 22px; height: 22px; }
+
+    #clock-tray { font-size: 11px; text-align: right; color: #8b949e; padding-right: 6px; line-height: 1.3; }
+
+    /* Start Menu */
+    #start-menu {
+      position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(20px);
+      width: 440px; height: 500px; background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+      display: none; opacity: 0; transition: all 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+      z-index: 9998; padding: 24px; flex-direction: column; justify-content: space-between;
+    }
+    #start-menu.active { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
+    
+    .start-search {
+      width: 100%; padding: 10px 14px; background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; color: white;
+      font-size: 12px; outline: none; margin-bottom: 20px;
+    }
+    .start-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .start-item {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 12px 6px; border-radius: 8px; cursor: pointer; transition: background 0.15s;
+    }
+    .start-item:hover { background: rgba(255, 255, 255, 0.08); }
+    .start-item svg, .start-item img { width: 32px; height: 32px; }
+    .start-item span { font-size: 11px; color: #c9d1d9; }
+
+    .start-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;
+    }
+    .user-profile { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 500; }
+    .user-avatar-sm { width: 28px; height: 28px; background: #0078d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+    /* App Store & Files UI */
+    .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+    .store-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .store-card h4 { font-size: 14px; color: #e6edf3; }
+    .store-card p { font-size: 11px; color: #8b949e; flex: 1; }
+    .btn-install { padding: 6px 12px; background: #0078d4; border: none; color: white; font-size: 12px; border-radius: 4px; cursor: pointer; }
+    .btn-install:hover { background: #106ebe; }
+
+    .file-row { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 8px; }
+    .file-info { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+
+    /* Form Styles */
+    .field-group { margin-bottom: 16px; }
+    .field-group label { display: block; font-size: 12px; margin-bottom: 6px; color: #8b949e; }
+    .field-group input, .field-group textarea { width: 100%; padding: 8px 12px; background: #161b22; border: 1px solid #30363d; color: white; border-radius: 6px; outline: none; }
+    .btn-save { padding: 8px 16px; background: #0078d4; border: none; color: white; font-weight: 500; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body oncontextmenu="showContextMenu(event)">
+
+  <!-- SVG ICON TEMPLATES -->
+  <svg style="display: none;">
+    <!-- Fluent App Store Icon -->
+    <g id="icon-app-store">
+      <rect width="48" height="48" rx="10" fill="#0078D4"/>
+      <path d="M15 16C15 12.134 18.134 9 22 9H26C29.866 9 33 12.134 33 16V18H35C36.1046 18 37 18.8954 37 20V36C37 37.1046 36.1046 38 35 38H13C11.8954 38 11 37.1046 11 36V20C11 18.8954 11.8954 18 13 18H15V16ZM18 18H30V16C30 13.7909 28.2091 12 26 12H22C19.7909 12 18 13.7909 18 16V18Z" fill="white"/>
+      <path d="M20 25C20 23.8954 20.8954 23 22 23H26C27.1046 23 28 23.8954 28 25V29C28 30.1046 27.1046 31 26 31H22C20.8954 31 20 30.1046 20 29V25Z" fill="#60CDFF"/>
+    </g>
+    <!-- CODERY IDE Icon -->
+    <g id="icon-codery">
+      <rect width="48" height="48" rx="10" fill="#1E1E1E"/>
+      <path d="M14 16L8 24L14 32" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <path d="M34 16L40 24L34 32" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <path d="M27 12L21 36" stroke="#4ADE80" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    </g>
+  </svg>
+
+  <!-- Options Context Menu -->
+  <div id="context-menu">
+    <div class="menu-item" onclick="openApp('store'); hideContextMenu();">
+      <svg width="16" height="16" viewBox="0 0 48 48"><use href="#icon-app-store"/></svg> Open App Store
+    </div>
+    <div class="menu-item" onclick="openApp('codery'); hideContextMenu();">
+      <svg width="16" height="16" viewBox="0 0 48 48"><use href="#icon-codery"/></svg> Launch CODERY
+    </div>
+    <div class="menu-item" onclick="openApp('files'); hideContextMenu();">
+      <img src="https://api.iconify.design/fluent:folder-24-filled.svg?color=%23e3a835" style="width:16px;"> File Explorer
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" onclick="location.reload()">
+      <img src="https://api.iconify.design/fluent:arrow-clockwise-24-filled.svg?color=%238b949e" style="width:16px;"> Refresh Desktop
+    </div>
+    <div class="menu-item" onclick="openApp('settings'); hideContextMenu();">
+      <img src="https://api.iconify.design/fluent:settings-24-regular.svg?color=%238b949e" style="width:16px;"> Personalize
+    </div>
+  </div>
+
+  <!-- Lock Screen -->
+  <div id="lock-screen">
+    <div class="login-card">
+      <div class="login-avatar">C</div>
+      <div style="font-size: 16px; font-weight: 600;">COMET USER</div>
+      <div class="login-field">
+        <input type="password" id="pass-input" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter') attemptLogin()">
+        <button class="login-btn" onclick="attemptLogin()">➔</button>
+      </div>
+      <div id="login-err" class="login-error">Incorrect password. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- Desktop -->
+  <div id="desktop" ondblclick="showContextMenu(event)">
+    <div class="app-icon" onclick="openApp('store')">
+      <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
+      <span>App Store</span>
+    </div>
+    <div class="app-icon" onclick="openApp('codery')">
+      <svg viewBox="0 0 48 48"><use href="#icon-codery"/></svg>
+      <span>CODERY</span>
+    </div>
+    <div class="app-icon" onclick="openApp('files')">
+      <img src="https://api.iconify.design/fluent:folder-24-filled.svg?color=%23e3a835" alt="File Explorer">
+      <span>Files</span>
+    </div>
+    <div class="app-icon" onclick="openApp('upload_app')">
+      <img src="https://api.iconify.design/fluent:arrow-upload-24-filled.svg?color=%23238636" alt="Upload App">
+      <span>Upload App</span>
+    </div>
+    <div class="app-icon" onclick="openApp('settings')">
+      <img src="https://api.iconify.design/fluent:settings-24-regular.svg?color=%238b949e" alt="Settings">
+      <span>Settings</span>
+    </div>
+    <div id="custom-desktop-icons" style="display: contents;"></div>
+  </div>
+
+  <!-- Start Menu -->
+  <div id="start-menu">
+    <div>
+      <input type="text" class="start-search" placeholder="Type here to search COMET OS...">
+      <div class="start-grid">
+        <div class="start-item" onclick="openApp('store'); toggleStartMenu();">
+          <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
+          <span>App Store</span>
+        </div>
+        <div class="start-item" onclick="openApp('codery'); toggleStartMenu();">
+          <svg viewBox="0 0 48 48"><use href="#icon-codery"/></svg>
+          <span>CODERY</span>
+        </div>
+        <div class="start-item" onclick="openApp('files'); toggleStartMenu();">
+          <img src="https://api.iconify.design/fluent:folder-24-filled.svg?color=%23e3a835" alt="Files">
+          <span>Files</span>
+        </div>
+        <div class="start-item" onclick="openApp('upload_app'); toggleStartMenu();">
+          <img src="https://api.iconify.design/fluent:arrow-upload-24-filled.svg?color=%23238636" alt="Upload App">
+          <span>Upload App</span>
+        </div>
+        <div class="start-item" onclick="openApp('settings'); toggleStartMenu();">
+          <img src="https://api.iconify.design/fluent:settings-24-regular.svg?color=%238b949e" alt="Settings">
+          <span>Settings</span>
+        </div>
+      </div>
+    </div>
+    <div class="start-footer">
+      <div class="user-profile">
+        <div class="user-avatar-sm" id="avatar-initial">C</div>
+        <span id="start-username">COMET USER</span>
+      </div>
+      <img src="https://api.iconify.design/fluent:power-24-regular.svg?color=%23f85149" style="width:18px; cursor:pointer;" title="Lock OS" onclick="lockOS()">
+    </div>
+  </div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <div style="width: 80px;"></div>
+    <div class="taskbar-center">
+      <button class="taskbar-btn" onclick="toggleStartMenu()">
+        <img src="https://api.iconify.design/fluent:grid-24-filled.svg?color=%230078d4" alt="Start">
+      </button>
+      <button class="taskbar-btn" onclick="openApp('store')">
+        <svg viewBox="0 0 48 48"><use href="#icon-app-store"/></svg>
+      </button>
+      <button class="taskbar-btn" onclick="openApp('codery')">
+        <svg viewBox="0 0 48 48"><use href="#icon-codery"/></svg>
+      </button>
+      <button class="taskbar-btn" onclick="openApp('files')">
+        <img src="https://api.iconify.design/fluent:folder-24-filled.svg?color=%23e3a835" alt="Files">
+      </button>
+      <button class="taskbar-btn" onclick="openApp('upload_app')">
+        <img src="https://api.iconify.design/fluent:arrow-upload-24-filled.svg?color=%23238636" alt="Upload App">
+      </button>
+    </div>
+    <div id="clock-tray">
+      <div id="clock-time">00:00</div>
+      <div id="clock-date" style="font-size: 10px;">2026-07-25</div>
+    </div>
+  </div>
+
+  <script>
+    // --- FIREBASE REALTIME DATABASE CONFIGURATION ---
+    const FIREBASE_RTDB_URL = "https://turbo-95264-default-rtdb.firebaseio.com/comet_apps";
+    const FALLBACK_ICON = "https://api.iconify.design/fluent:app-generic-24-filled.svg?color=%230078d4";
+
+    // --- CONTEXT MENU OPTIONS ---
+    function showContextMenu(e) {
+      e.preventDefault();
+      const menu = document.getElementById('context-menu');
+      menu.style.display = 'block';
+      menu.style.left = `${e.clientX}px`;
+      menu.style.top = `${e.clientY}px`;
+    }
+
+    function hideContextMenu() {
+      document.getElementById('context-menu').style.display = 'none';
+    }
+
+    document.addEventListener('click', hideContextMenu);
+
+    // --- AUTHENTICATION ---
+    function attemptLogin() {
+      const pass = document.getElementById('pass-input').value;
+      if (pass === "COMETS101") {
+        document.getElementById('lock-screen').classList.add('unlocked');
+        document.getElementById('login-err').style.display = 'none';
+        document.getElementById('pass-input').value = '';
+      } else {
+        document.getElementById('login-err').style.display = 'block';
+      }
+    }
+
+    function lockOS() {
+      document.getElementById('lock-screen').classList.remove('unlocked');
+      toggleStartMenu();
+    }
+
+    // --- STATE MANAGEMENT ---
+    const DEFAULT_SETTINGS = {
+      wallpaper: "url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat",
+      username: 'COMET USER',
+      installedApps: []
+    };
+
+    function loadState() {
+      const saved = localStorage.getItem('comet_os_state');
+      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    }
+
+    function saveState(key, value) {
+      const currentState = loadState();
+      currentState[key] = value;
+      localStorage.setItem('comet_os_state', JSON.stringify(currentState));
+      applyState();
+    }
+
+    function applyState() {
+      const state = loadState();
+      document.getElementById('desktop').style.background = state.wallpaper;
+      document.getElementById('start-username').innerText = state.username;
+      renderInstalledApps();
+    }
+
+    // --- FIREBASE REALTIME DB INTEGRATION ---
+    async function uploadAppToFirebase(name, icon, url, description) {
+      if (!name || !url) {
+        alert("Please fill in at least the App Title and Web URL!");
+        return;
+      }
+
+      const cleanIcon = icon.trim() ? icon.trim() : FALLBACK_ICON;
+
+      const payload = {
+        name: name,
+        icon: cleanIcon,
+        url: url,
+        description: description || "No description provided."
+      };
+
+      try {
+        const response = await fetch(`${FIREBASE_RTDB_URL}.json`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          alert("App published successfully to COMET App Store!");
+          openApp('store');
+        } else {
+          alert("Error publishing app. Check your Realtime Database rules.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Network error publishing to Firebase.");
+      }
+    }
+
+    async function fetchAppsFromFirebase() {
+      try {
+        const res = await fetch(`${FIREBASE_RTDB_URL}.json`);
+        const data = await res.json();
+        if (!data) return [];
+        return Object.keys(data).map(key => ({
+          id: key,
+          name: data[key].name || "Untitled App",
+          icon: data[key].icon || FALLBACK_ICON,
+          url: data[key].url || "about:blank",
+          code: data[key].code || null,
+          description: data[key].description || ""
+        }));
+      } catch (e) {
+        console.error(e);
+        return [];
+      }
+    }
+
+    function installApp(appObj) {
+      const state = loadState();
+      if (!state.installedApps) state.installedApps = [];
+      if (!state.installedApps.some(a => a.id === appObj.id)) {
+        state.installedApps.push(appObj);
+        localStorage.setItem('comet_os_state', JSON.stringify(state));
+        renderInstalledApps();
+        alert(`${appObj.name} saved to Desktop and Files!`);
+      } else {
+        alert(`${appObj.name} is already installed!`);
+      }
+    }
+
+    function uninstallApp(appId) {
+      const state = loadState();
+      state.installedApps = (state.installedApps || []).filter(a => a.id !== appId);
+      localStorage.setItem('comet_os_state', JSON.stringify(state));
+      renderInstalledApps();
+      closeWindow('files');
+      openApp('files');
+    }
+
+    function renderInstalledApps() {
+      const state = loadState();
+      const container = document.getElementById('custom-desktop-icons');
+      container.innerHTML = '';
+      (state.installedApps || []).forEach(app => {
+        const div = document.createElement('div');
+        div.className = 'app-icon';
+        div.onclick = () => openCustomApp(app);
+        
+        const appIconSrc = app.icon || FALLBACK_ICON;
+        div.innerHTML = `
+          <img src="${appIconSrc}" alt="${app.name}" onerror="this.src='${FALLBACK_ICON}'">
+          <span>${app.name}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- CODERY EXECUTION ENGINE ---
+    function runCoderyApp() {
+      const code = document.getElementById('codery-code-input').value;
+      const iframe = document.getElementById('codery-iframe-preview');
+      iframe.srcdoc = code;
+    }
+
+    function saveCoderyApp() {
+      const name = document.getElementById('codery-app-title').value.trim() || 'Untitled App';
+      const code = document.getElementById('codery-code-input').value;
+
+      const newApp = {
+        id: 'codery_' + Date.now(),
+        name: name,
+        icon: 'https://api.iconify.design/fluent:code-24-filled.svg?color=%2338bdf8',
+        code: code,
+        description: 'Custom app built with CODERY Studio.'
+      };
+
+      installApp(newApp);
+    }
+
+    // --- WINDOW MANAGEMENT ---
+    let zIndexCounter = 100;
+
+    function openApp(appId) {
+      if (document.getElementById(`win-${appId}`)) {
+        focusWindow(document.getElementById(`win-${appId}`));
+        return;
+      }
+
+      const win = document.createElement('div');
+      win.className = 'os-window';
+      win.id = `win-${appId}`;
+      win.style.left = `${100 + (zIndexCounter % 10) * 20}px`;
+      win.style.top = `${50 + (zIndexCounter % 10) * 20}px`;
+      win.style.zIndex = ++zIndexCounter;
+
+      let title = 'Application';
+      let content = '';
+
+      if (appId === 'codery') {
+        title = 'CODERY App Studio';
+        content = `
+          <div class="codery-container">
+            <div class="codery-toolbar">
+              <input type="text" id="codery-app-title" placeholder="App Name" value="My Comet App">
+              <button class="codery-btn" onclick="runCoderyApp()">▶ Run Code</button>
+              <button class="codery-btn" style="background: #238636;" onclick="saveCoderyApp()">📥 Save to Desktop</button>
+            </div>
+            <div class="codery-workspace">
+              <textarea id="codery-code-input" class="codery-editor" spellcheck="false"><!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; display: grid; place-items: center; height: 90vh; margin: 0; background: #0d1117; color: white; }
+    .card { background: #161b22; border: 1px solid #30363d; padding: 24px; border-radius: 12px; text-align: center; }
+    button { padding: 10px 20px; font-size: 14px; border-radius: 6px; border: none; background: #0078d4; color: white; cursor: pointer; }
+    button:hover { background: #106ebe; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Welcome to My App</h2>
+    <p style="color:#8b949e; margin: 12px 0;">Built completely inside CODERY Studio!</p>
+    <button onclick="alert('It works!')">Click Me</button>
+  </div>
+</body>
+</html></textarea>
+              <iframe id="codery-iframe-preview" class="codery-preview"></iframe>
+            </div>
+          </div>
+        `;
+      } else if (appId === 'files') {
+        title = 'File Explorer - C:/System/Apps';
+        const state = loadState();
+        const apps = state.installedApps || [];
+        content = `
+          <h4 style="margin-bottom:12px; color:#8b949e;">Installed Executable Files (.app)</h4>
+          ${apps.length === 0 ? '<p style="color:#8b949e; font-size:12px;">No installed app files found.</p>' : ''}
+          ${apps.map(a => `
+            <div class="file-row">
+              <div class="file-info">
+                <img src="${a.icon}" style="width:20px; height:20px;" onerror="this.src='${FALLBACK_ICON}'">
+                <span>${a.name.toLowerCase().replace(/\s+/g, '_')}.app</span>
+              </div>
+              <button class="btn-install" style="background:#f85149;" onclick="uninstallApp('${a.id}')">Delete File</button>
+            </div>
+          `).join('')}
+        `;
+      } else if (appId === 'settings') {
+        title = 'Settings';
+        const state = loadState();
+        content = `
+          <div class="field-group">
+            <label>Username</label>
+            <input type="text" id="user-input" value="${state.username}">
+          </div>
+          <div class="field-group">
+            <label>Desktop Wallpaper (CSS URL)</label>
+            <input type="text" id="wall-input" value="${state.wallpaper}">
+          </div>
+          <button class="btn-save" onclick="
+            saveState('username', document.getElementById('user-input').value);
+            saveState('wallpaper', document.getElementById('wall-input').value);
+          ">Save Changes</button>
+        `;
+      } else if (appId === 'store') {
+        title = 'Comet App Store';
+        content = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Available Apps</h3>
+            <button class="btn-install" onclick="openApp('upload_app')">+ Upload App</button>
+          </div>
+          <div id="store-list" class="store-grid">Loading store apps...</div>
+        `;
+        setTimeout(async () => {
+          const apps = await fetchAppsFromFirebase();
+          const list = document.getElementById('store-list');
+          if (!list) return;
+          if (apps.length === 0) {
+            list.innerHTML = `<p style="color:#8b949e; grid-column: 1/-1;">No apps available. Click "Upload App" to publish one!</p>`;
+          } else {
+            list.innerHTML = apps.map(app => `
+              <div class="store-card">
+                <img src="${app.icon}" style="width:32px; height:32px; object-fit:contain;" onerror="this.src='${FALLBACK_ICON}'">
+                <h4>${app.name}</h4>
+                <p>${app.description}</p>
+                <button class="btn-install" onclick='installApp(${JSON.stringify(app)})'>Install App</button>
+              </div>
+            `).join('');
+          }
+        }, 100);
+      } else if (appId === 'upload_app') {
+        title = 'Publish App to Firebase Store';
+        content = `
+          <div class="field-group"><label>App Title</label><input type="text" id="app-title-in" placeholder="e.g. My Custom Web App"></div>
+          <div class="field-group"><label>Icon Image URL</label><input type="text" id="app-icon-in" placeholder="https://..."></div>
+          <div class="field-group"><label>App Embed URL</label><input type="text" id="app-url-in" placeholder="https://..."></div>
+          <div class="field-group"><label>Description</label><textarea id="app-desc-in" rows="3" placeholder="Brief explanation..."></textarea></div>
+          <button class="btn-save" onclick="uploadAppToFirebase(
+            document.getElementById('app-title-in').value,
+            document.getElementById('app-icon-in').value,
+            document.getElementById('app-url-in').value,
+            document.getElementById('app-desc-in').value
+          )">Publish to Store</button>
+        `;
+      }
+
+      win.innerHTML = `
+        <div class="window-header" onmousedown="dragWindow(event, this.parentElement)">
+          <div class="window-title">${title}</div>
+          <div class="window-controls">
+            <button class="control-btn" onclick="closeWindow('${appId}')">✕</button>
+          </div>
+        </div>
+        <div class="window-content">${content}</div>
+      `;
+
+      win.addEventListener('mousedown', () => focusWindow(win));
+      document.getElementById('desktop').appendChild(win);
+
+      if (appId === 'codery') {
+        runCoderyApp();
+      }
+    }
+
+    function openCustomApp(app) {
+      const winId = `custom-${app.id}`;
+      if (document.getElementById(`win-${winId}`)) {
+        focusWindow(document.getElementById(`win-${winId}`));
+        return;
+      }
+
+      const win = document.createElement('div');
+      win.className = 'os-window';
+      win.id = `win-${winId}`;
+      win.style.left = '140px';
+      win.style.top = '70px';
+      win.style.zIndex = ++zIndexCounter;
+
+      let innerAppContent = '';
+      if (app.code) {
+        innerAppContent = `<iframe id="frame-${winId}"></iframe>`;
+      } else {
+        innerAppContent = `<iframe src="${app.url}" allow="fullscreen"></iframe>`;
+      }
+
+      win.innerHTML = `
+        <div class="window-header" onmousedown="dragWindow(event, this.parentElement)">
+          <div class="window-title">${app.name}</div>
+          <div class="window-controls">
+            <button class="control-btn" onclick="closeWindow('${winId}')">✕</button>
+          </div>
+        </div>
+        <div class="window-content" style="padding:0;">${innerAppContent}</div>
+      `;
+
+      win.addEventListener('mousedown', () => focusWindow(win));
+      document.getElementById('desktop').appendChild(win);
+
+      if (app.code) {
+        const iframe = document.getElementById(`frame-${winId}`);
+        iframe.srcdoc = app.code;
+      }
+    }
+
+    function closeWindow(appId) {
+      const win = document.getElementById(`win-${appId}`);
+      if (win) win.remove();
+    }
+
+    function focusWindow(win) {
+      win.style.zIndex = ++zIndexCounter;
+    }
+
+    function dragWindow(e, win) {
+      focusWindow(win);
+      let posX = e.clientX - win.offsetLeft;
+      let posY = e.clientY - win.offsetTop;
+
+      function moveHandler(e) {
+        win.style.left = `${e.clientX - posX}px`;
+        win.style.top = `${e.clientY - posY}px`;
+      }
+
+      function stopHandler() {
+        document.removeEventListener('mousemove', moveHandler);
+        document.removeEventListener('mouseup', stopHandler);
+      }
+
+      document.addEventListener('mousemove', moveHandler);
+      document.addEventListener('mouseup', stopHandler);
+    }
+
+    function toggleStartMenu() {
+      document.getElementById('start-menu').classList.toggle('active');
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('clock-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('clock-date').innerText = now.toISOString().split('T')[0];
+    }, 1000);
+
+    applyState();
+  </script>
+</body>
+</html>

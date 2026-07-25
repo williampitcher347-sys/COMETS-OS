@@ -68,7 +68,16 @@
       border-radius: 8px; display: flex; flex-direction: column;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); overflow: hidden;
       min-width: 360px; min-height: 240px;
+      transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
     }
+
+    /* FULLSCREEN WINDOW STYLING */
+    .os-window.maximized {
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: calc(100vh - 48px) !important;
+      border-radius: 0 !important; border: none !important;
+    }
+
     .window-header {
       height: 38px; background: rgba(30, 36, 46, 0.85); display: flex; align-items: center;
       justify-content: space-between; padding-left: 14px; cursor: move;
@@ -578,6 +587,14 @@
     // --- WINDOW MANAGEMENT ---
     let zIndexCounter = 100;
 
+    // FULLSCREEN TOGGLE FUNCTION
+    function toggleMaximize(winId) {
+      const win = document.getElementById(`win-${winId}`);
+      if (win) {
+        win.classList.toggle('maximized');
+      }
+    }
+
     function openApp(appId) {
       if (document.getElementById(`win-${appId}`)) {
         focusWindow(document.getElementById(`win-${appId}`));
@@ -720,7 +737,8 @@
         <div class="window-header" onmousedown="dragWindow(event, this.parentElement)">
           <div class="window-title">${title}</div>
           <div class="window-controls">
-            <button class="control-btn" onclick="closeWindow('${appId}')">✕</button>
+            <button class="control-btn" title="Toggle Fullscreen" onclick="toggleMaximize('${appId}')">⤢</button>
+            <button class="control-btn btn-close" title="Close" onclick="closeWindow('${appId}')">✕</button>
           </div>
         </div>
         <div class="window-content">${content}</div>
@@ -754,7 +772,8 @@
         <div class="window-header" onmousedown="dragWindow(event, this.parentElement)">
           <div class="window-title">${app.name}</div>
           <div class="window-controls">
-            <button class="control-btn" onclick="closeWindow('${winId}')">✕</button>
+            <button class="control-btn" title="Toggle Fullscreen" onclick="toggleMaximize('${winId}')">⤢</button>
+            <button class="control-btn btn-close" title="Close" onclick="closeWindow('${winId}')">✕</button>
           </div>
         </div>
         <div class="window-content" style="padding:0;">${innerAppContent}</div>
@@ -782,6 +801,7 @@
     }
 
     function dragWindow(e, win) {
+      if (win.classList.contains('maximized')) return; // Disable drag while in fullscreen mode
       focusWindow(win);
       let posX = e.clientX - win.offsetLeft;
       let posY = e.clientY - win.offsetTop;
